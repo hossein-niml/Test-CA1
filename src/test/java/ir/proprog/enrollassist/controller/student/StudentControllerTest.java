@@ -59,6 +59,9 @@ public class StudentControllerTest {
                 userRepository);
     }
 
+    // Test Model : Dummy, Stub
+    // Validation : State
+    // Approach : Mockisty
     @Test
     public void allTest() {
         when(studentRepository.findAll()).thenReturn(List.of(s1, s2, s3));
@@ -71,6 +74,9 @@ public class StudentControllerTest {
         assertEquals(expected, actual);
     }
 
+    // Test Model : Dummy, Stub
+    // Validation : State
+    // Approach : Mockisty
     @Test
     public void oneTest() {
         when(studentRepository.findByStudentNumber(s1.getStudentNumber())).thenReturn(Optional.of(s1));
@@ -84,6 +90,9 @@ public class StudentControllerTest {
         assertEquals("Student not found", studentNotFound.getReason());
     }
 
+    // Test Model : Dummy, Stub
+    // Validation : State
+    // Approach : Mockisty
     @Test
     public void addStudentTest() {
         when(studentRepository.findByStudentNumber(s3.getStudentNumber())).thenReturn(Optional.of(s3));
@@ -105,6 +114,9 @@ public class StudentControllerTest {
         assertEquals("This student already exists.", studentAlreadyExists.getReason());
     }
 
+    // Test Model : Dummy, Stub
+    // Validation : State
+    // Approach : Mockisty
     @Test
     public void findTakeableSectionsByMajorTest() throws ExceptionList {
         Student student = mock(Student.class);
