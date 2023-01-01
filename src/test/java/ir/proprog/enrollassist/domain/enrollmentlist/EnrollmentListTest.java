@@ -35,45 +35,13 @@ public class EnrollmentListTest {
         Course c3 = new Course("3333333", "c3", 4, GraduateLevel.Undergraduate.name());
         Course c4 = new Course("4444444", "c4", 4, GraduateLevel.Undergraduate.name());
         Course c5 = new Course("5555555", "c5", 4, GraduateLevel.Undergraduate.name());
-        return List.of(c0, c1, c2, c3, c4, c5);
+        Course c6 = new Course("6666666", "c6", 4, GraduateLevel.Undergraduate.name());
+        Course c7 = new Course("7777777", "c7", 4, GraduateLevel.Undergraduate.name());
+        return List.of(c0, c1, c2, c3, c4, c5, c6, c7);
     }
 
-    private static Section getSection(int courseNum) throws ExceptionList {
+    private static Section generateSection(int courseNum) throws ExceptionList {
         return new Section(courses().get(courseNum), String.valueOf(courseNum));
-    }
-
-    @Test
-    public void minCreditsRequiredNotMetTest() throws ExceptionList {
-        Collection<Section> sections = List.of(getSection(0));
-        validateSingleViolation(sections,
-                new MinCreditsRequiredNotMet(enrollmentList.getOwner().getGraduateLevel().getMinValidTermCredit()));
-    }
-
-    @Test
-    public void maxCreditsLimitExceededTestWithZeroGpa() throws ExceptionList {
-        Collection<Section> sections = new ArrayList<>();
-        for (int i = 0; i < courses().size(); i++) {
-            sections.add(getSection(i));
-        }
-        validateSingleViolation(sections, new MaxCreditsLimitExceeded(20));
-    }
-
-    @Test
-    public void maxCreditsLimitExceededTestWithLessThan12Gpa() throws ExceptionList {
-        student.setGrade(new Term().getTermCode(), courses().get(0), 10);
-        Collection<Section> sections = new ArrayList<>();
-        for (int i = 1; i < courses().size(); i++) {
-            sections.add(getSection(i));
-        }
-        validateSingleViolation(sections, new MaxCreditsLimitExceeded(14));
-    }
-
-    private <V extends EnrollmentRuleViolation> void validateSingleViolation(Collection<Section> sections,
-                                                                             V expectedViolation) {
-        sections.forEach(section -> enrollmentList.addSection(section));
-        List<EnrollmentRuleViolation> actualViolations = enrollmentList.checkEnrollmentRules();
-        assertThat(actualViolations.size()).isEqualTo(1);
-        assertThat(actualViolations.get(0).toString()).isEqualTo(expectedViolation.toString());
     }
 
     @BeforeEach
@@ -97,5 +65,60 @@ public class EnrollmentListTest {
     public void reset() {
         student = null;
         enrollmentList = null;
+    }
+
+    @Test
+    public void minCreditsRequiredNotMetTest() throws ExceptionList {
+        Collection<Section> sections = List.of(generateSection(0));
+        int minValidTermCredit = enrollmentList.getOwner().getGraduateLevel().getMinValidTermCredit();
+        validateSingleViolation(sections, new MinCreditsRequiredNotMet(minValidTermCredit));
+    }
+
+    @Test
+    public void maxCreditsLimitExceededTestWithZeroGpa() throws ExceptionList {
+        Collection<Section> sections = new ArrayList<>();
+        for (int i = 2; i < courses().size(); i++) {
+            sections.add(generateSection(i));
+        }
+        validateSingleViolation(sections, new MaxCreditsLimitExceeded(20));
+    }
+
+    @Test
+    public void maxCreditsLimitExceededTestWithLessThan12Gpa() throws ExceptionList {
+        student.setGrade(new Term().getTermCode(), courses().get(0), 10);
+        Collection<Section> sections = new ArrayList<>();
+        for (int i = 2; i < courses().size(); i++) {
+            sections.add(generateSection(i));
+        }
+        validateSingleViolation(sections, new MaxCreditsLimitExceeded(14));
+    }
+
+    @Test
+    public void maxCreditsLimitExceededTestWithLessThan17Gpa() throws ExceptionList {
+        student.setGrade(new Term().getTermCode(), courses().get(0), 15);
+        Collection<Section> sections = new ArrayList<>();
+        for (int i = 2; i < courses().size(); i++) {
+            sections.add(generateSection(i));
+        }
+        validateSingleViolation(sections, new MaxCreditsLimitExceeded(20));
+    }
+
+    @Test
+    public void maxCreditsLimitExceededTestWithCreditsMoreThanMaxValidCredits() throws ExceptionList {
+        student.setGrade(new Term().getTermCode(), courses().get(0), 19);
+        Collection<Section> sections = new ArrayList<>();
+        for (int i = 1; i < courses().size(); i++) {
+            sections.add(generateSection(i));
+        }
+        int maxValidCredits = enrollmentList.getOwner().getGraduateLevel().getMaxValidCredits();
+        validateSingleViolation(sections, new MaxCreditsLimitExceeded(maxValidCredits));
+    }
+
+    private <V extends EnrollmentRuleViolation> void validateSingleViolation(Collection<Section> sections,
+                                                                             V expectedViolation) {
+        sections.forEach(section -> enrollmentList.addSection(section));
+        List<EnrollmentRuleViolation> actualViolations = enrollmentList.checkEnrollmentRules();
+        assertThat(actualViolations.size()).isEqualTo(1);
+        assertThat(actualViolations.get(0).toString()).isEqualTo(expectedViolation.toString());
     }
 }
