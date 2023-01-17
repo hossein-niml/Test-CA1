@@ -8,7 +8,6 @@ Feature: As an user I want to add a new course
     When user adds a new course with invalid graduate level
     Then user gets an error with message="Graduate level is not valid."
 
-
   Scenario Outline: Credits is less than 0 or more than 4
     When user adds a new course with credits=<invalidCredits>
     Then user gets an error with message="Credit must be one of the following values: 0, 1, 2, 3, 4."
@@ -20,7 +19,6 @@ Feature: As an user I want to add a new course
       | 5              |
       | 12             |
 
-
   Scenario Outline: Invalid course number
     When user adds a new course with number=<invalidCourseNumber>
     Then user gets an error with message=<errorMessage>
@@ -31,3 +29,6 @@ Feature: As an user I want to add a new course
       | "s1"                | "Course number must be number."         |
       | "12345678"          | "Course number must contain 7 numbers." |
 
+  Scenario: Without any problem
+    When user adds a new course with correct values
+    Then user does not get any error
