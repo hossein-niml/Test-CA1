@@ -6,28 +6,40 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import ir.proprog.enrollassist.Exception.ExceptionList;
 import ir.proprog.enrollassist.domain.EnrollmentRules.EnrollmentRuleViolation;
+import ir.proprog.enrollassist.domain.EnrollmentRules.PrerequisiteNotTaken;
 import ir.proprog.enrollassist.domain.GraduateLevel;
 import ir.proprog.enrollassist.domain.course.Course;
 import ir.proprog.enrollassist.domain.student.Student;
 import lombok.RequiredArgsConstructor;
-import org.junit.platform.commons.util.StringUtils;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 @RequiredArgsConstructor
 public class CourseStepDefinitions {
     private final Map<String, Course> courseMap = new HashMap<>();
-    private final Map<String, Student> studentMap = new HashMap<>();
     private ExceptionList exceptionList = new ExceptionList();
     private List<EnrollmentRuleViolation> violations = new ArrayList<>();
 
+    @Mock
+    private Student student;
+
     @Before
     public void setup() {
+        MockitoAnnotations.openMocks(this);
         exceptionList = new ExceptionList();
         violations.clear();
+        Course course = Optional.ofNullable(addCourseWithErrorChecking("1234567",
+                        "c1",
+                        2,
+                        GraduateLevel.Undergraduate.toString()))
+                .orElseThrow(() -> new RuntimeException("Bad input for test"));
+        when(student.hasPassed(course)).thenReturn(true);
     }
 
     @When("user adds a new course with correct values")
@@ -62,27 +74,19 @@ public class CourseStepDefinitions {
                         2,
                         GraduateLevel.Undergraduate.toString()))
                 .orElseThrow(() -> new RuntimeException("Bad input for test"));
-        List<String> prerequisiteTitles = parse(prerequisiteTitlesStr);
-        if (prerequisiteTitles != null) {
-            Set<Course> prerequisites = prerequisiteTitles.stream().map(courseMap::get).collect(Collectors.toSet());
+        String[] prerequisiteTitles = prerequisiteTitlesStr.split(",");
+        if (prerequisiteTitles.length != 0) {
+            Set<Course> prerequisites = Arrays.stream(prerequisiteTitles).map(courseMap::get).collect(Collectors.toSet());
             course.setPrerequisites(prerequisites);
         }
         courseMap.put(title, course);
     }
 
-    @Given("student of {string} that has passed {string} courses")
-    public void setStudent(String studentName, String courseTitlesStr) throws ExceptionList {
-        List<String> courseTitles = parse(courseTitlesStr);
-        Student student = new Student("810197580");
-        if (courseTitles != null) {
-            List<Course> courses = courseTitles.stream().map(courseMap::get).toList();
-            for (var course : courses) {
-                student.setGrade("40001", course, 18);
-            }
-        }
-        studentMap.put(studentName, student);
+    @Given("student has passed {string} course")
+    public void addStudent(String courseTitlesStr) {
+        Course course = courseMap.get(courseTitlesStr);
+        when(student.hasPassed(course)).thenReturn(true);
     }
-
 
     @Then("user gets an error with message={string}")
     public void checkException(String expectedErrorMessage) {
@@ -97,19 +101,23 @@ public class CourseStepDefinitions {
         assertThat(exceptionList.getExceptions()).isEmpty();
     }
 
-    @When("student of {string} wants to take course of {string}")
-    public void takeCourse(String studentName, String courseName) {
-        Student student = studentMap.get(studentName);
+    @When("student wants to take course of {string}")
+    public void takeCourseByStudent(String courseName) {
         Course course = courseMap.get(courseName);
         violations = course.canBeTakenBy(student);
     }
 
-    @Then("student gets an error with message={string}")
-    public void checkViolation(String expectedErrorMessage) {
+    @Then("student gets PrerequisiteNotTaken error")
+    public void checkViolation() {
         EnrollmentRuleViolation violation = violations.stream()
                 .findAny()
                 .orElseThrow(() -> new RuntimeException("Bad input for test"));
-        assertThat(violation.toString()).isEqualTo(expectedErrorMessage);
+        assertThat(violation.getClass()).isEqualTo(PrerequisiteNotTaken.class);
+    }
+
+    @Then("student gets no error")
+    public void checkNoViolation() {
+        assertThat(violations).isEmpty();
     }
 
     private Course addCourseWithErrorChecking(String courseNumber, String title, int credits, String graduateLevel) {
@@ -119,12 +127,5 @@ public class CourseStepDefinitions {
             exceptionList = el;
             return null;
         }
-    }
-
-    private List<String> parse(String str) {
-        if (StringUtils.isBlank(str)) {
-            return null;
-        }
-        return List.of(",".split(str));
     }
 }
